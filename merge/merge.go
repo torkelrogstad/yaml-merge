@@ -72,12 +72,22 @@ func mergeUnmarshalled(base, override interface{}) (interface{}, error) {
 
 	// sanity check: only equivalent types of fields can be merged
 	if baseType.Kind() != overrideType.Kind() {
-		panic(fmt.Sprintf("mistmatching kinds: %s and %s", baseType.Kind(), overrideType.Kind()))
+		panic(fmt.Sprintf("mismatching kinds: %s and %s", baseType.Kind(), overrideType.Kind()))
 	}
 
-	// maps are the only thing we're merging, other values are overridden as is
-	// could do slices as well, but then you get the question of whether or not
-	// to include duplicates. seems easier to just avoid that question
+	// concatenate slices
+	if baseType.Kind() == reflect.Slice {
+		var out []interface{}
+		for i := 0; i < baseValue.Len(); i++ {
+			out = append(out, baseValue.Index(i).Interface())
+		}
+		for i := 0; i < overrideValue.Len(); i++ {
+			out = append(out, overrideValue.Index(i).Interface())
+		}
+		return out, nil
+	}
+
+	// merge maps, everything else override
 	if baseType.Kind() != reflect.Map {
 		return override, nil
 	}
